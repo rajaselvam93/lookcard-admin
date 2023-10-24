@@ -17,32 +17,55 @@ import {
 import { Form, Spinner, Alert } from "reactstrap";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
+import axios from "axios";
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
   const [passState, setPassState] = useState(false);
   const [errorVal, setError] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-  const onFormSubmit = (formData) => {
+  const onFormSubmit = async (formData) => {
     setLoading(true);
-    const loginName = "info@softnio.com";
-    const pass = "123456";
-    if (formData.name === loginName && formData.passcode === pass) {
-      localStorage.setItem("accessToken", "token");
-      setTimeout(() => {
-        window.history.pushState(
-          `${process.env.PUBLIC_URL ? process.env.PUBLIC_URL : "/"}`,
-          "auth-login",
-          `${process.env.PUBLIC_URL ? process.env.PUBLIC_URL : "/"}`
-        );
-        window.location.reload();
-      }, 2000);
-    } else {
-      setTimeout(() => {
-        setError("Cannot login with credentials");
-        setLoading(false);
-      }, 2000);
+console.log("formData0", formData);
+    try {
+      const req = {
+        email,
+        password,
+      }
+
+      const response = await axios.post(process.env.REACT_APP_ADMIN_URL + '/login', {
+        email,
+        password,
+      });
+
+      // Handle the API response here, e.g., store user token in state
+      // or redirect to a different page.
+      // console.log(response.data);
+    } catch (error) {
+      // Handle login error, e.g., display an error message to the user
+      console.error('Login failed:', error);
     }
+
+    // const loginName = "info@softnio.com";
+    // const pass = "123456";
+    // if (formData.name === loginName && formData.passcode === pass) {
+    //   localStorage.setItem("accessToken", "token");
+    //   setTimeout(() => {
+    //     window.history.pushState(
+    //       `${process.env.PUBLIC_URL ? process.env.PUBLIC_URL : "/"}`,
+    //       "auth-login",
+    //       `${process.env.PUBLIC_URL ? process.env.PUBLIC_URL : "/"}`
+    //     );
+    //     window.location.reload();
+    //   }, 2000);
+    // } else {
+    //   setTimeout(() => {
+    //     setError("Cannot login with credentials");
+    //     setLoading(false);
+    //   }, 2000);
+    // }
   };
 
   const { errors, register, handleSubmit } = useForm();
@@ -89,9 +112,10 @@ const Login = () => {
                     id="default-01"
                     name="name"
                     ref={register({ required: "This field is required" })}
-                    defaultValue="info@softnio.com"
+                    value={email}
                     placeholder="Enter your email address or username"
                     className="form-control-lg form-control"
+                    onChange={(e) => setEmail(e.target.value)}
                   />
                   {errors.name && <span className="invalid">{errors.name.message}</span>}
                 </div>
@@ -122,10 +146,11 @@ const Login = () => {
                     type={passState ? "text" : "password"}
                     id="password"
                     name="passcode"
-                    defaultValue="123456"
+                    value={password}
                     ref={register({ required: "This field is required" })}
                     placeholder="Enter your passcode"
                     className={`form-control-lg form-control ${passState ? "is-hidden" : "is-shown"}`}
+                    onChange={(e) => setPassword(e.target.value)}
                   />
                   {errors.passcode && <span className="invalid">{errors.passcode.message}</span>}
                 </div>

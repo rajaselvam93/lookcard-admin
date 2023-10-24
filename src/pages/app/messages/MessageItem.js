@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import SimpleBar from "simplebar-react";
 import classNames from "classnames";
 import MessageProfileSidebar from "./MessageProfile";
-import { Modal, ModalBody, DropdownMenu, DropdownToggle, UncontrolledDropdown, DropdownItem } from "reactstrap";
+import { Modal, ModalBody, DropdownMenu, DropdownToggle, UncontrolledDropdown, DropdownItem, Badge } from "reactstrap";
 import { Button, Icon, TooltipComponent, UserAvatar } from "../../../components/Component";
 import { ReplyItem, MetaItem } from "./MessagePartials";
 import { currentTime, findUpper, todaysDate, monthNames } from "../../../utils/Utils";
