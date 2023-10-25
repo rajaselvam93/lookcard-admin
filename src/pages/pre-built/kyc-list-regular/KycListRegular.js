@@ -36,7 +36,7 @@ import {
 import { filterStatus, filterDoc, bulkActionKycOptions } from "./KycData";
 import { findUpper } from "../../../utils/Utils";
 import { Link } from "react-router-dom";
-import { kycuserlist } from "../../../services/card";
+import { kycuserlist, applicationReject, applicationApproved } from "../../../services/card";
 import moment from "moment";
 
 const KycListRegular = ({ history }) => {
@@ -53,6 +53,8 @@ const KycListRegular = ({ history }) => {
   const [sort, setSortState] = useState("");
   const [docType, setdocType] = useState("all");
   const [kycstatus, setkycstatus] = useState("");
+  const [remark, setRemark] = useState('Enter KYC Rejection details');
+
 
   // Sorting data
   const sortFunc = (params) => {
@@ -85,12 +87,13 @@ const KycListRegular = ({ history }) => {
       await setData([]);
     }
   }
+
   // onChange function for searching name
   const onFilterChange = (e) => {
     console.log("onSearchTextasasssa", e);
     setSearchText(e.target.value);
     if (onSearchText !== "") {
-      console.log("enter if",onSearchText);
+      console.log("enter if", onSearchText);
       const filteredObject = data.filter((item) => {
         return item.name_on_card.toLowerCase().includes(onSearchText.toLowerCase());
       });
@@ -163,10 +166,43 @@ const KycListRegular = ({ history }) => {
   };
 
   const handleButtonClick = () => {
-    console.log("raja");
     setSearchText('');
     toggle();
   };
+
+  const handleRemarkChange = (event) => {
+    setRemark(event.target.value);
+  };
+
+  const onRejectFunction = async (id, remark) => {
+    console.log("iddddd:", id);
+    console.log("remarkremarkremark:", remark);
+    const req = { card_id: id, user_id: 1, status: "rejected", remark: remark}
+    try {
+      const response = await applicationReject(req);
+      if (response && response.data) {
+        console.log("setTransactionsListPdf", response);
+        loadkyclist()
+      }
+    } catch (error) {
+      console.error("Error loading transaction history:", error);
+    }
+  }
+
+  const approveApplication = async (id) => {
+    console.log("iddddd:", id);
+    const req = { card_id: id, status_given_by: 1}
+    try {
+      const response = await applicationApproved(req);
+      if (response && response.data) {
+        console.log("setTransactionsListPdf", response);
+        loadkyclist()
+        setreMarkModal(false);
+      }
+    } catch (error) {
+      console.error("Error loading transaction history:", error);
+    }
+  }
 
   // function to toggle the search option
   const toggle = () => setonSearch(!onSearch);
@@ -214,7 +250,7 @@ const KycListRegular = ({ history }) => {
                         options={bulkActionKycOptions}
                         className="w-130px"
                         placeholder="Bulk Action"
-                       onChange={(e) => onActionText(e)}
+                        onChange={(e) => onActionText(e)}
                       />
                     </div>
                     <div className="btn-wrap">
@@ -224,7 +260,7 @@ const KycListRegular = ({ history }) => {
                           outline
                           disabled={actionText === "" ? true : false}
                           className="btn-dim"
-                         onClick={() => onActionClick()}
+                          onClick={() => onActionClick()}
                         >
                           Apply
                         </Button>
@@ -235,7 +271,7 @@ const KycListRegular = ({ history }) => {
                           outline
                           disabled={actionText === "" ? true : false}
                           className="btn-dim btn-icon"
-                         onClick={() => onActionClick()}
+                          onClick={() => onActionClick()}
                         >
                           <Icon name="arrow-right"></Icon>
                         </Button>
@@ -411,7 +447,7 @@ const KycListRegular = ({ history }) => {
                 <div className="card-body">
                   <div className="search-content">
                     <Button
-                     onClick={handleButtonClick}
+                      onClick={handleButtonClick}
                       className="search-back btn-icon toggle-search"
                     >
                       <Icon name="arrow-left"></Icon>
@@ -439,7 +475,7 @@ const KycListRegular = ({ history }) => {
                       type="checkbox"
                       className="custom-control-input"
                       id="uid_1"
-                     onChange={(e) => selectorCheck(e)}
+                      onChange={(e) => selectorCheck(e)}
                     />
                     <label className="custom-control-label" htmlFor="uid_1"></label>
                   </div>
@@ -518,7 +554,7 @@ const KycListRegular = ({ history }) => {
                       <DataTableRow size="md">
                         <span className={`tb-status text-${item?.status === "approved" ? "success" : item?.status === "pending_approval" ? "info"
                           : "danger"}`}>
-                          {item?.status === "pending_approval" ? "Pending" : item?.status}
+                          {item?.status === "pending_approval" ? "Pending" : item?.status === "rejected" ? "Rejected" : item?.status === "approved" ? "Approved" :item?.status}
                         </span>
                         {/* {item?.status !== "pending_approval" && (
                           <TooltipComponent icon="info" direction="top" id={item?.id + "pendingless" } text={`${item?.status} at Dec 18, 2019
@@ -534,13 +570,16 @@ const KycListRegular = ({ history }) => {
                         <div className="user-card">
                           {/* <UserAvatar theme="orange-dim" size="xs" text={item?.customer_type}></UserAvatar> */}
                           <div className="user-name">
-                            <span className="tb-lead">{item?.status_given_by_user ? item?.status_given_by_user.first_name : '-' } </span>
+                            <span className="tb-lead">{item?.status_given_by_user ? item?.status_given_by_user.first_name : '-'} </span>
                           </div>
                         </div>
                       </DataTableRow>
                       <DataTableRow className="nk-tb-col-tools">
                         <ul className="nk-tb-actions gx-1">
-                          <li className="nk-tb-action-hidden">
+                          <li className="nk-tb-action-hidden" onClick={() => {
+                            loadDetail(item.id);
+                            setViewModal(true);
+                          }}>
                             <TooltipComponent tag="a" containerClassName="btn btn-trigger btn-icon" id={"view" + item.id} icon="eye-fill"
                               direction="top" text="Quick View" />
                           </li>
@@ -552,7 +591,9 @@ const KycListRegular = ({ history }) => {
                             </li>
                           ) : (
                             <React.Fragment>
-                              <li className="nk-tb-action-hidden">
+                              <li className="nk-tb-action-hidden" onClick={() => {
+                                approveApplication(item.id);
+                              }}>
                                 <TooltipComponent tag="a" containerClassName="btn btn-trigger btn-icon" id={"approve" + item.id}
                                   icon="check-fill-c" direction="top" text="Approve" />
                               </li>
@@ -573,7 +614,13 @@ const KycListRegular = ({ history }) => {
                               <DropdownMenu end>
                                 <ul className="link-list-opt no-bdr">
                                   <li>
-                                    <DropdownItem tag="a" href="#view">
+                                    <DropdownItem tag="a" href="#view"
+                                      onClick={(ev) => {
+                                        ev.preventDefault();
+                                        loadDetail(item.id);
+                                        setViewModal(true);
+                                      }}
+                                    >
                                       <Icon name="eye"></Icon>
                                       <span>Quick View</span>
                                     </DropdownItem>
@@ -672,32 +719,32 @@ const KycListRegular = ({ history }) => {
             <Row className="gy-3">
               <Col lg={6}>
                 <span className="sub-text"> ID</span>
-                <span className="caption-text">{detail.id}</span>
+                <span className="caption-text">{detail?.kyc?.id}</span>
               </Col>
               <Col lg={6}>
                 <span className="sub-text">Applicant Name </span>
-                <span className="caption-text text-break">{detail.name}</span>
+                <span className="caption-text text-break">{detail?.kyc?.first_name}</span>
               </Col>
               <Col lg={6}>
                 <span className="sub-text">Document Type </span>
-                <span className="caption-text">{detail.doc}</span>
+                <span className="caption-text">{detail?.kyc?.document_type}</span>
               </Col>
               <Col lg={6}>
                 <span className="sub-text">Status</span>
-                {/* <Badge
-                  color={detail.status === "Approved" ? "success" : detail.status === "Pending" ? "info" : "danger"}
+                <Badge
+                  color={detail.status === "approved" ? "success" : detail.status === "pending_approval" ? "info" : "danger"}
                   size="md"
                 >
-                  {detail.status}
-                </Badge> */}
+                  {detail?.status === "pending_approval" ? "Pending" : detail?.status}
+                </Badge>
               </Col>
               <Col lg={6}>
                 <span className="sub-text">Date</span>
-                <span className="caption-text"> {detail.date}</span>
+                <span className="caption-text"> {moment(detail?.time_of_application).format('DD MMM, YYYY h:mm a')}</span>
               </Col>
               <Col lg={6}>
                 <span className="sub-text">Checked By</span>
-                {/* <span className="caption-text"> {detail.checked}</span> */}
+                <span className="caption-text">{detail?.status_given_by_user ? detail?.status_given_by_user.first_name : '-'}</span>
               </Col>
             </Row>
           </div>
@@ -728,14 +775,22 @@ const KycListRegular = ({ history }) => {
                     Remark
                   </Label>
                   <div className="form-control-wrap">
-                    <Input className="no-resize" id="default-textarea" defaultValue="Enter KYC Rejection details" type="textarea" />
+                  <Input
+              className="no-resize"
+              id="default-textarea"
+              value={remark}
+              onChange={handleRemarkChange}
+              type="textarea"
+            />
                   </div>
                 </div>
               </Col>
 
               <Col lg={6}>
                 <div className="mb-2">
-                  <Button color="primary">Submit</Button>
+                  <Button color="primary" onClick={() => {
+                    onRejectFunction(detail.id, remark);
+                  }} >Submit</Button>
                 </div>
               </Col>
             </Row>
