@@ -28,18 +28,27 @@ const Login = () => {
 
   const onFormSubmit = async (formData) => {
     setLoading(true);
-console.log("formData0", formData);
+    console.log("formData0", formData);
     try {
       const req = {
         email,
         password,
       }
 
-      const response = await axios.post(process.env.REACT_APP_ADMIN_URL + '/login', {
+      const response = await axios.post('http://localhost:8000/api/v1/user-DyyV9G948Thn/login', {
         email,
         password,
       });
 
+      localStorage.setItem("accessToken", "token");
+      setTimeout(() => {
+        window.history.pushState(
+          `${process.env.PUBLIC_URL ? process.env.PUBLIC_URL : "/"}`,
+          "auth-login",
+          `${process.env.PUBLIC_URL ? process.env.PUBLIC_URL : "/"}`
+        );
+        window.location.reload();
+      }, 2000);
       // Handle the API response here, e.g., store user token in state
       // or redirect to a different page.
       // console.log(response.data);
