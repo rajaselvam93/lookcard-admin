@@ -33,10 +33,10 @@ import {
   PaginationComponent,
   RSelect,
 } from "../../../components/Component";
-import { filterStatus, filterDoc, bulkActionKycOptions } from "./KycData";
-import { findUpper } from "../../../utils/Utils";
+// import { filterStatus, filterDoc, bulkActionKycOptions } from "./KycData";
+// import { findUpper } from "../../../utils/Utils";
 import { Link } from "react-router-dom";
-import { kycuserlist, applicationReject, applicationApproved } from "../../../services/card";
+import { kycuserlist, applicationReject, applicationApproved, kycusersbulkupdate, exportexcel, exportpdf } from "../../../services/card";
 import moment from "moment";
 
 const KycListRegular = ({ history }) => {
@@ -54,6 +54,9 @@ const KycListRegular = ({ history }) => {
   const [docType, setdocType] = useState("all");
   const [kycstatus, setkycstatus] = useState("");
   const [remark, setRemark] = useState('Enter KYC Rejection details');
+  const [selectedDocType, setSelectedDocType] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedItems, setSelectedItems] = useState([]);
 
 
   // Sorting data
@@ -88,6 +91,56 @@ const KycListRegular = ({ history }) => {
     }
   }
 
+  const exportcards = async (e) => {
+    const req = { ids: selectedItems };
+    console.log("cardlistaspdf", req);
+    try {
+      if (e.value === 'pdf') {
+        const response = await exportpdf(req);
+        if (response && response.data) {
+          console.log("dataaa", response.data);
+          const recData = response.data;
+          const filename = 'users-account.pdf'
+          exportData(recData, filename);
+          //  await setData(response.data.data);
+        }
+      } else if (e.value === 'excel') { // I assume this is what you intended
+        const response = await exportexcel(req);
+        if (response && response.data && response.data) {
+          const recData = response.data;
+          const filename = 'users-account.xlsx'
+          exportData(recData, filename);
+          // await setData(response.data.data);
+        }
+      }
+    } catch (error) {
+      console.error("An error occurred:", error);
+    }
+  }
+
+  const onActionClick = async () => {
+    const req = { ids: selectedItems, status: actionText, status_given_by: 1 };
+    console.log("req----------->", req);
+    try {
+      const response = await kycusersbulkupdate(req);
+      if (response && response.data && response.data.data) {
+        loadkyclist()
+      }
+    } catch (error) {
+      await setData([]);
+    }
+  }
+
+  const exportData = (data, filename) => {
+    const url = window.URL.createObjectURL(new Blob([data]))
+    const link = document.createElement('a');
+    link.href = url
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+  }
+
+
   // onChange function for searching name
   const onFilterChange = (e) => {
     console.log("onSearchTextasasssa", e);
@@ -104,7 +157,6 @@ const KycListRegular = ({ history }) => {
     }
   };
 
-  console.log("data", data);
   // function to declare the state change
   const onActionText = (e) => {
     setActionText(e.value);
@@ -121,43 +173,44 @@ const KycListRegular = ({ history }) => {
   };
 
   // function to change the property of an item of the table
+  // const onSelectChange = (e, id) => {
+  //   console.log("id ", id);
+  //   let newData = data;
+  //   let index = newData.findIndex((item) => item.id === id);
+  //   newData[index].check = e.currentTarget.checked;
+  //   setSelectedValue([...index]);
+  // };
+
   const onSelectChange = (e, id) => {
+    console.log("id ", id);
+    const isChecked = e.target.checked;
     let newData = data;
     let index = newData.findIndex((item) => item.id === id);
     newData[index].check = e.currentTarget.checked;
-    setData([...newData]);
-  };
-
-  // function to fire actions after dropdowm select
-  const onActionClick = (e) => {
-    if (actionText === "Reject") {
-      let newData = data.map((item) => {
-        if (item.check === true) item.status = "Rejected";
-        return item;
-      });
-      setData([...newData]);
-    } else if (actionText === "Delete") {
-      let newData;
-      newData = data.filter((item) => item.check !== true);
-      setData([...newData]);
+    if (isChecked) {
+      setSelectedItems([...selectedItems, id]);
+    } else {
+      setSelectedItems(selectedItems.filter((selectedItem) => selectedItem !== id));
     }
   };
 
-  // function to change to approve property for an item
-  const onApproveClick = (id) => {
-    let newData = data;
-    let index = newData.findIndex((item) => item.id === id);
-    newData[index].status = "Approved";
-    setData([...newData]);
-  };
 
-  // function to change to reject property for an item
-  const onRejectClick = (id) => {
-    let newData = data;
-    let index = newData.findIndex((item) => item.id === id);
-    newData[index].status = "Rejected";
-    setData([...newData]);
-  };
+
+  // function to fire actions after dropdowm select
+  // const onActionClick = () => {
+  //   console.log("setSelectedValue", selectedItems);
+  //   // if (actionText === "Reject") {
+  //   //   let newData = data.map((item) => {
+  //   //     if (item.check === true) item.status = "Rejected";
+  //   //     return item;
+  //   //   });
+  //   //   setData([...newData]);
+  //   // } else if (actionText === "Delete") {
+  //   //   let newData;
+  //   //   newData = data.filter((item) => item.check !== true);
+  //   //   setData([...newData]);
+  //   // }
+  // };
 
   // function to load detail data
   const loadDetail = (id) => {
@@ -175,13 +228,23 @@ const KycListRegular = ({ history }) => {
   };
 
   const onRejectFunction = async (id, remark) => {
-    console.log("iddddd:", id);
-    console.log("remarkremarkremark:", remark);
-    const req = { card_id: id, user_id: 1, status: "rejected", remark: remark}
+    const req = { card_id: id, user_id: 1, status: "rejected", remark: remark }
     try {
       const response = await applicationReject(req);
       if (response && response.data) {
-        console.log("setTransactionsListPdf", response);
+        loadkyclist()
+        setreMarkModal(false);
+      }
+    } catch (error) {
+      console.error("Error loading transaction history:", error);
+    }
+  }
+
+  const onSuspendUser = async (id) => {
+    const req = { card_id: id, user_id: 1, status: "suspended" }
+    try {
+      const response = await applicationReject(req);
+      if (response && response.data) {
         loadkyclist()
       }
     } catch (error) {
@@ -190,12 +253,10 @@ const KycListRegular = ({ history }) => {
   }
 
   const approveApplication = async (id) => {
-    console.log("iddddd:", id);
-    const req = { card_id: id, status_given_by: 1}
+    const req = { card_id: id, status_given_by: 1 }
     try {
       const response = await applicationApproved(req);
       if (response && response.data) {
-        console.log("setTransactionsListPdf", response);
         loadkyclist()
         setreMarkModal(false);
       }
@@ -203,6 +264,65 @@ const KycListRegular = ({ history }) => {
       console.error("Error loading transaction history:", error);
     }
   }
+
+  const handleFilter = async () => {
+    try {
+      const response = await kycuserlist();
+      if (response && response.data && response.data.data) {
+        const filterData = response.data.data;
+        if (selectedDocType && !selectedStatus) {
+          const filteredObject = filterData.filter((item) => {
+            return item.kyc?.document_type.toLowerCase().includes(selectedDocType);
+          });
+          setData([...filteredObject]);
+        } else if (!selectedDocType && selectedStatus) {
+          const filteredObject = filterData.filter((item) => {
+            return item?.status.toLowerCase().includes(selectedStatus);
+          });
+          setData([...filteredObject]);
+        } else if (selectedDocType && selectedStatus) {
+          const filteredObject = filterData.filter((item) => {
+            return item?.status.toLowerCase().includes(selectedStatus);
+          });
+          const filteredObjectType = await filteredObject.filter((item) => {
+            return item.kyc?.document_type.toLowerCase().includes(selectedDocType);
+          });
+          setData([...filteredObjectType]);
+        }
+      }
+    } catch (error) {
+      await setData([]);
+    }
+  };
+
+  const resetFilter = () => {
+    setSelectedDocType('');
+    setSelectedStatus('');
+    loadkyclist()
+  }
+
+  const filterStatus = [
+    { value: "approved", label: "Approved" },
+    { value: "pending", label: "Pending" },
+    { value: "deleted", label: "Deleted" },
+    { value: "rejected", label: "Rejected" },
+  ];
+
+  const filterDoc = [
+    { value: "nid", label: "Nidcard" },
+    { value: "passport", label: "Passport" },
+    { value: "driving", label: "Driving" },
+  ];
+
+  const bulkActionKycOptions = [
+    { value: "suspended", label: "Suspend" },
+    { value: "rejected", label: "Reject" },
+  ];
+
+  const exportActionKycOptions = [
+    { value: "pdf", label: "PDF" },
+    { value: "excel", label: "Excel" },
+  ];
 
   // function to toggle the search option
   const toggle = () => setonSearch(!onSearch);
@@ -231,7 +351,13 @@ const KycListRegular = ({ history }) => {
             <BlockHeadContent>
               <Button color="light" outline className="bg-white d-none d-sm-inline-flex">
                 <Icon name="download-cloud"></Icon>
-                <span>Export</span>
+                {/* <span>Export</span> */}
+                <RSelect
+                  options={exportActionKycOptions}
+                  className="w-100px"
+                  placeholder="Export"
+                  onChange={(e) => exportcards(e)}
+                />
               </Button>
               <Button color="light" outline className="btn-icon bg-white d-inline-flex d-sm-none">
                 <Icon name="download-cloud"></Icon>
@@ -327,18 +453,30 @@ const KycListRegular = ({ history }) => {
                                       <Col size="6">
                                         <div className="form-group">
                                           <label className="overline-title overline-title-alt">Doc Type</label>
-                                          <RSelect options={filterDoc} placeholder="Any Type" />
+                                          <RSelect
+                                            options={filterDoc}
+                                            placeholder="Any Type"
+                                            value={selectedDocType}
+                                            onChange={(selectedOption) => setSelectedDocType(selectedOption.value)}
+                                          />
+                                          {/* <RSelect options={filterDoc} placeholder="Any Type" /> */}
                                         </div>
                                       </Col>
                                       <Col size="6">
                                         <div className="form-group">
                                           <label className="overline-title overline-title-alt">Status</label>
-                                          <RSelect options={filterStatus} placeholder="Any Status" />
+                                          <RSelect
+                                            options={filterStatus}
+                                            placeholder="Any Status"
+                                            value={selectedStatus}
+                                            onChange={(selectedOption) => setSelectedStatus(selectedOption.value)}
+                                          />
+                                          {/* <RSelect options={filterStatus} placeholder="Any Status" /> */}
                                         </div>
                                       </Col>
                                       <Col size="12">
                                         <div className="form-group">
-                                          <Button type="button" color="secondary">
+                                          <Button type="button" color="secondary" onClick={handleFilter}>
                                             Filter
                                           </Button>
                                         </div>
@@ -349,20 +487,20 @@ const KycListRegular = ({ history }) => {
                                     <a
                                       className="clickable"
                                       href="#reset"
-                                      onClick={(ev) => {
-                                        ev.preventDefault();
+                                      onClick={() => {
+                                        resetFilter();
                                       }}
                                     >
                                       Reset Filter
                                     </a>
-                                    <a
+                                    {/* <a
                                       href="#save"
                                       onClick={(ev) => {
                                         ev.preventDefault();
                                       }}
                                     >
                                       Save Filter
-                                    </a>
+                                    </a> */}
                                   </div>
                                 </DropdownMenu>
                               </UncontrolledDropdown>
@@ -554,7 +692,7 @@ const KycListRegular = ({ history }) => {
                       <DataTableRow size="md">
                         <span className={`tb-status text-${item?.status === "approved" ? "success" : item?.status === "pending_approval" ? "info"
                           : "danger"}`}>
-                          {item?.status === "pending_approval" ? "Pending" : item?.status === "rejected" ? "Rejected" : item?.status === "approved" ? "Approved" :item?.status}
+                          {item?.status === "pending_approval" ? "Pending" : item?.status === "rejected" ? "Rejected" : item?.status === "approved" ? "Approved" : item?.status === "suspended" ? "Suspended" : item?.status === "active" ? "Active" : item?.status}
                         </span>
                         {/* {item?.status !== "pending_approval" && (
                           <TooltipComponent icon="info" direction="top" id={item?.id + "pendingless" } text={`${item?.status} at Dec 18, 2019
@@ -636,7 +774,7 @@ const KycListRegular = ({ history }) => {
                                     </DropdownItem>
                                   </li>
                                   {item.status === "rejected" ? null : item.status === "approved" ? (
-                                    <li onClick={() => onRejectClick(item.id)}>
+                                    <li onClick={() => { loadDetail(item.id); setreMarkModal(true); }}>
                                       <DropdownItem tag="a" href="#reject" onClick={(ev) => {
                                         ev.preventDefault();
                                       }}
@@ -647,7 +785,7 @@ const KycListRegular = ({ history }) => {
                                     </li>
                                   ) : (
                                     <React.Fragment>
-                                      <li onClick={() => onApproveClick(item.id)}>
+                                      <li onClick={() => { approveApplication(item.id); }}>
                                         <DropdownItem tag="a" href="#approve" onClick={(ev) => {
                                           ev.preventDefault();
                                         }}
@@ -656,7 +794,7 @@ const KycListRegular = ({ history }) => {
                                           <span>Approve</span>
                                         </DropdownItem>
                                       </li>
-                                      <li onClick={() => onRejectClick(item.id)}>
+                                      <li onClick={() => { onSuspendUser(item.id); }}>
                                         <DropdownItem tag="a" href="#suspend" onClick={(ev) => {
                                           ev.preventDefault();
                                         }}
@@ -775,13 +913,13 @@ const KycListRegular = ({ history }) => {
                     Remark
                   </Label>
                   <div className="form-control-wrap">
-                  <Input
-              className="no-resize"
-              id="default-textarea"
-              value={remark}
-              onChange={handleRemarkChange}
-              type="textarea"
-            />
+                    <Input
+                      className="no-resize"
+                      id="default-textarea"
+                      value={remark}
+                      onChange={handleRemarkChange}
+                      type="textarea"
+                    />
                   </div>
                 </div>
               </Col>

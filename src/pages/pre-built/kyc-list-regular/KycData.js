@@ -241,6 +241,6 @@ export const filterDoc = [
 ];
 
 export const bulkActionKycOptions = [
-  { value: "Reject", label: "Reject" },
-  { value: "Delete", label: "Delete" },
+  { value: "suspend", label: "Suspend" },
+  { value: "reject", label: "Reject" },
 ];
