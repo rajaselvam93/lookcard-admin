@@ -80,6 +80,8 @@ const FeesManagement = () => {
                                     </div>
                                 </Col>
 
+                                
+
                                 <Col lg="6">
                                     <div className="form-group">
                                         <label className="form-label" htmlFor="email-address-1">Credit Limit</label>
