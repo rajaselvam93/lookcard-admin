@@ -81,6 +81,12 @@ const menu = [
     link: "/kyc-list-regular",
 },
 
+{
+  icon: "icon ni ni-coins",
+  text: "Fees Management",
+  link: "/fees-management",
+},
+
   // {
   //   icon: "file-docs",
   //   text: "AML / KYCs",

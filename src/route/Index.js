@@ -69,6 +69,7 @@ import UserContactCardPage from "../pages/pre-built/user-manage/UserContactCard"
 import UserDetailsPage from "../pages/pre-built/user-manage/UserDetailsRegular";
 import UserListCompact from "../pages/pre-built/user-manage/UserListCompact";
 import UserProfileLayout from "../pages/pre-built/user-manage/UserProfileLayout";
+import FeesManagement from "../pages/pre-built/fees-management/index";
 import KycListRegular from "../pages/pre-built/kyc-list-regular/KycListRegular";
 import KycDetailsRegular from "../pages/pre-built/kyc-list-regular/kycDetailsRegular";
 import TransListBasic from "../pages/pre-built/trans-list/TransListBasic";
@@ -165,6 +166,7 @@ const Pages = () => {
             </UserContextProvider>
           )}
         ></Route>
+        <Route exact path={`${process.env.PUBLIC_URL}/fees-management`} component={FeesManagement}></Route>
         <Route exact path={`${process.env.PUBLIC_URL}/kyc-list-regular`} component={KycListRegular}></Route>
         <Route exact path={`${process.env.PUBLIC_URL}/kyc-details-regular/:id`} component={KycDetailsRegular}></Route>
         <Route exact path={`${process.env.PUBLIC_URL}/transaction-basic`} component={TransListBasic}></Route>
