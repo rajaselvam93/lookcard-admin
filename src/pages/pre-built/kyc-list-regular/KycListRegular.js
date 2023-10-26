@@ -7,7 +7,7 @@ import {
   UncontrolledDropdown,
   DropdownMenu,
   DropdownToggle,
-  Label, 
+  Label,
   Input,
   DropdownItem,
   Badge,
@@ -33,15 +33,17 @@ import {
   PaginationComponent,
   RSelect,
 } from "../../../components/Component";
-import { kycData, filterStatus, filterDoc, bulkActionKycOptions } from "./KycData";
+import { filterStatus, filterDoc, bulkActionKycOptions } from "./KycData";
 import { findUpper } from "../../../utils/Utils";
 import { Link } from "react-router-dom";
+import { kycuserlist, applicationReject, applicationApproved } from "../../../services/card";
+import moment from "moment";
 
 const KycListRegular = ({ history }) => {
   const [onSearch, setonSearch] = useState(true);
   const [onSearchText, setSearchText] = useState("");
   const [tablesm, updateTableSm] = useState(false);
-  const [data, setData] = useState(kycData);
+  const [data, setData] = useState([]);
   const [viewModal, setViewModal] = useState(false);
   const [reMarkModal, setreMarkModal] = useState(false);
   const [detail, setDetail] = useState({});
@@ -49,36 +51,60 @@ const KycListRegular = ({ history }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemPerPage, setItemPerPage] = useState(10);
   const [sort, setSortState] = useState("");
+  const [docType, setdocType] = useState("all");
+  const [kycstatus, setkycstatus] = useState("");
+  const [remark, setRemark] = useState('Enter KYC Rejection details');
+
 
   // Sorting data
   const sortFunc = (params) => {
     let defaultData = data;
     if (params === "asc") {
-      let sortedData = defaultData.sort((a, b) => a.name.localeCompare(b.name));
+      let sortedData = defaultData.sort((a, b) => a.name_on_card.localeCompare(b.name_on_card));
       setData([...sortedData]);
     } else if (params === "dsc") {
-      let sortedData = defaultData.sort((a, b) => b.name.localeCompare(a.name));
+      let sortedData = defaultData.sort((a, b) => b.name_on_card.localeCompare(a.name_on_card));
       setData([...sortedData]);
     }
   };
 
   // Changing state value when searching name
   useEffect(() => {
-    if (onSearchText !== "") {
-      const filteredObject = kycData.filter((item) => {
-        return item.name.toLowerCase().includes(onSearchText.toLowerCase());
-      });
-      setData([...filteredObject]);
-    } else {
-      setData([...kycData]);
+    loadkyclist()
+  }, []);
+
+  const loadkyclist = async () => {
+    console.log("enter raja count");
+    const req = { docType: docType, status: kycstatus, page: currentPage, limit: itemPerPage, order: sort };
+    try {
+      const response = await kycuserlist(req);
+      if (response && response.data && response.data.data) {
+        await setData(response?.data?.data);
+      } else {
+        console.log("enter Raja");
+      }
+    } catch (error) {
+      await setData([]);
     }
-  }, [onSearchText]);
+  }
 
   // onChange function for searching name
   const onFilterChange = (e) => {
+    console.log("onSearchTextasasssa", e);
     setSearchText(e.target.value);
+    if (onSearchText !== "") {
+      console.log("enter if", onSearchText);
+      const filteredObject = data.filter((item) => {
+        return item.name_on_card.toLowerCase().includes(onSearchText.toLowerCase());
+      });
+      setData([...filteredObject]);
+    } else {
+      console.log("enter else");
+      setData([...data]);
+    }
   };
 
+  console.log("data", data);
   // function to declare the state change
   const onActionText = (e) => {
     setActionText(e.value);
@@ -139,6 +165,45 @@ const KycListRegular = ({ history }) => {
     setDetail(data[index]);
   };
 
+  const handleButtonClick = () => {
+    setSearchText('');
+    toggle();
+  };
+
+  const handleRemarkChange = (event) => {
+    setRemark(event.target.value);
+  };
+
+  const onRejectFunction = async (id, remark) => {
+    console.log("iddddd:", id);
+    console.log("remarkremarkremark:", remark);
+    const req = { card_id: id, user_id: 1, status: "rejected", remark: remark}
+    try {
+      const response = await applicationReject(req);
+      if (response && response.data) {
+        console.log("setTransactionsListPdf", response);
+        loadkyclist()
+      }
+    } catch (error) {
+      console.error("Error loading transaction history:", error);
+    }
+  }
+
+  const approveApplication = async (id) => {
+    console.log("iddddd:", id);
+    const req = { card_id: id, status_given_by: 1}
+    try {
+      const response = await applicationApproved(req);
+      if (response && response.data) {
+        console.log("setTransactionsListPdf", response);
+        loadkyclist()
+        setreMarkModal(false);
+      }
+    } catch (error) {
+      console.error("Error loading transaction history:", error);
+    }
+  }
+
   // function to toggle the search option
   const toggle = () => setonSearch(!onSearch);
 
@@ -151,6 +216,7 @@ const KycListRegular = ({ history }) => {
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   return (
+
     <React.Fragment>
       <Head title="KYC Lists - Regular"></Head>
       <Content>
@@ -173,7 +239,6 @@ const KycListRegular = ({ history }) => {
             </BlockHeadContent>
           </BlockBetween>
         </BlockHead>
-
         <Block>
           <DataTable className="card-stretch">
             <div className="card-inner position-relative card-tools-toggle">
@@ -382,10 +447,7 @@ const KycListRegular = ({ history }) => {
                 <div className="card-body">
                   <div className="search-content">
                     <Button
-                      onClick={() => {
-                        setSearchText("");
-                        toggle();
-                      }}
+                      onClick={handleButtonClick}
                       className="search-back btn-icon toggle-search"
                     >
                       <Icon name="arrow-left"></Icon>
@@ -404,6 +466,7 @@ const KycListRegular = ({ history }) => {
                 </div>
               </div>
             </div>
+
             <DataTableBody>
               <DataTableHead>
                 <DataTableRow className="nk-tb-col-check">
@@ -437,250 +500,184 @@ const KycListRegular = ({ history }) => {
                 </DataTableRow>
                 <DataTableRow className="nk-tb-col-tools">&nbsp;</DataTableRow>
               </DataTableHead>
-
               {currentItems.length > 0
-                ? currentItems.map((item) => {
-                    return (
-                      <DataTableItem key={item.id}>
-                        <DataTableRow className="nk-tb-col-check">
-                          <div className="custom-control custom-control-sm custom-checkbox notext">
-                            <input
-                              type="checkbox"
-                              className="custom-control-input"
-                              defaultChecked={item.check}
-                              id={item.id + "uid1"}
-                              key={Math.random()}
-                              onChange={(e) => onSelectChange(e, item.id)}
-                            />
-                            <label className="custom-control-label" htmlFor={item.id + "uid1"}></label>
-                          </div>
-                        </DataTableRow>
-                        <DataTableRow>
-                          <Link to={`${process.env.PUBLIC_URL}/kyc-details-regular/${item.id}`}>
-                            <div className="user-card">
-                              <UserAvatar
-                                theme={item.avatarBg}
-                                text={findUpper(item.name)}
-                                image={item.image}
-                              ></UserAvatar>
-                              <div className="user-info">
-                                <span className="tb-lead">
-                                  {item.name}{" "}
-                                  <span
-                                    className={`dot dot-${
-                                      item.status === "Approved"
-                                        ? "success"
-                                        : item.status === "Pending"
-                                        ? "info"
-                                        : "danger"
-                                    } d-md-none ms-1`}
-                                  ></span>
-                                </span>
-                                <span>{item.id}</span>
-                              </div>
-                            </div>
-                          </Link>
-                        </DataTableRow>
-                        <DataTableRow size="mb">
-                          <span className="tb-lead-sub">{item.doc}</span>
-                        </DataTableRow>
-                        <DataTableRow size="md">
-                          <ul className="list-inline list-download">
-                            {item.front && (
-                              <li>
+                ? currentItems.map((item) => (
 
-                                Soft Copy - View{" "}
-                                <a
-                                  href="#download"
-                                  onClick={(ev) => {
-                                    ev.preventDefault();
-                                  }}
-                                  className="popup"
-                                >
-                                  <Icon name="download"></Icon>
-                                </a>
-                              </li>
-                            )}
-                           
-                          </ul>
-                        </DataTableRow>
-                        <DataTableRow size="lg">
-                          <span className="tb-date">{item.date}</span>
-                        </DataTableRow>
-                        <DataTableRow size="md">
-                          <span
-                            className={`tb-status text-${
-                              item.status === "Approved" ? "success" : item.status === "Pending" ? "info" : "danger"
-                            }`}
-                          >
-                            {item.status}
-                          </span>
-                          {item.status !== "Pending" && (
-                            <TooltipComponent
-                              icon="info"
-                              direction="top"
-                              id={item.id + "pendingless"}
-                              text={`${item.status} at Dec 18, 2019 01:02 am`}
-                            ></TooltipComponent>
-                          )}
-                          {!item.status === "Pending" && (
-                            <span>
-                              <TooltipComponent icon="info" direction="top" text={item.date} id={item.id} />
-                            </span>
-                          )}
-                        </DataTableRow>
-                        <DataTableRow size="lg">
+                  // <div key={item.id}>{item.name_on_card}</div>
+                  <>
+                    <DataTableItem key={item.id}>
+                      <DataTableRow className="nk-tb-col-check">
+                        <div className="custom-control custom-control-sm custom-checkbox notext">
+                          <input type="checkbox" className="custom-control-input" defaultChecked={item.check} id={item.id + "uid1"}
+                            key={Math.random()} onChange={(e) => onSelectChange(e, item.id)} />
+                          <label className="custom-control-label" htmlFor={item.id + "uid1"}></label>
+                        </div>
+                      </DataTableRow>
+                      <DataTableRow>
+                        <Link to={`${process.env.PUBLIC_URL}/kyc-details-regular/${item.id}`}>
                           <div className="user-card">
-                            <UserAvatar theme="orange-dim" size="xs" text={findUpper(item.checked)}></UserAvatar>
-                            <div className="user-name">
-                              <span className="tb-lead">{item.checked} </span>
+                            {/* <UserAvatar theme={item.avatarBg} text={item.name_on_card}></UserAvatar> */}
+                            <div className="user-info">
+                              <span className="tb-lead">
+                                {item.name_on_card}{" "}
+                                <span className={`dot dot-${item.status === "Approved" ? "success" : item.status === "pending_approval" ? "info"
+                                  : "danger"} d-md-none ms-1`}></span>
+                              </span>
+                              <span>{item.id}</span>
                             </div>
                           </div>
-                        </DataTableRow>
-                        <DataTableRow className="nk-tb-col-tools">
-                          <ul className="nk-tb-actions gx-1">
-                            <li
-                              className="nk-tb-action-hidden"
-                              onClick={() => {
-                                loadDetail(item.id);
-                                setViewModal(true);
+                        </Link>
+                      </DataTableRow>
+                      <DataTableRow size="mb">
+                        <span className="tb-lead-sub">{item?.kyc?.document_type}</span>
+                      </DataTableRow>
+                      <DataTableRow size="md">
+                        <ul className="list-inline list-download">
+                          {item?.kyc?.document_front_view ? (
+                            <li>
+                              Soft Copy - View{" "}
+                              <a href="#download" onClick={(ev) => {
+                                ev.preventDefault();
                               }}
-                            >
-                              <TooltipComponent
-                                tag="a"
-                                containerClassName="btn btn-trigger btn-icon"
-                                id={"view" + item.id}
-                                icon="eye-fill"
-                                direction="top"
-                                text="Quick View"
-                              />
+                                className="popup">
+                                <Icon name="download"></Icon>
+                              </a>
                             </li>
-                            {item.status === "Rejected" ? null : item.status === "Approved" ? (
+                          ) : (
+                            <li> -</li>
+                          )}
+                        </ul>
+                      </DataTableRow>
+                      <DataTableRow size="lg">
+                        <span className="tb-date">{moment(item?.time_of_application).format('DD MMM, YYYY h:mm a')}</span>
+                      </DataTableRow>
+                      <DataTableRow size="md">
+                        <span className={`tb-status text-${item?.status === "approved" ? "success" : item?.status === "pending_approval" ? "info"
+                          : "danger"}`}>
+                          {item?.status === "pending_approval" ? "Pending" : item?.status === "rejected" ? "Rejected" : item?.status === "approved" ? "Approved" :item?.status}
+                        </span>
+                        {/* {item?.status !== "pending_approval" && (
+                          <TooltipComponent icon="info" direction="top" id={item?.id + "pendingless" } text={`${item?.status} at Dec 18, 2019
+                            01:02 am`}></TooltipComponent>
+                          )}
+                          {!item?.status === "pending_approval" && (
+                          <span>
+                            <TooltipComponent icon="info" direction="top" text={item?.time_of_application} id={item?.id} />
+                          </span>
+                          )} */}
+                      </DataTableRow>
+                      <DataTableRow size="lg">
+                        <div className="user-card">
+                          {/* <UserAvatar theme="orange-dim" size="xs" text={item?.customer_type}></UserAvatar> */}
+                          <div className="user-name">
+                            <span className="tb-lead">{item?.status_given_by_user ? item?.status_given_by_user.first_name : '-'} </span>
+                          </div>
+                        </div>
+                      </DataTableRow>
+                      <DataTableRow className="nk-tb-col-tools">
+                        <ul className="nk-tb-actions gx-1">
+                          <li className="nk-tb-action-hidden" onClick={() => {
+                            loadDetail(item.id);
+                            setViewModal(true);
+                          }}>
+                            <TooltipComponent tag="a" containerClassName="btn btn-trigger btn-icon" id={"view" + item.id} icon="eye-fill"
+                              direction="top" text="Quick View" />
+                          </li>
+                          {item.status === "rejected" ? null : item.status === "approved" ? (
+                            <li className="nk-tb-action-hidden">
+                              <TooltipComponent tag="a" containerClassName="btn btn-trigger btn-icon" id={"reject" + item.id}
+                                icon="cross-fill-c" direction="top" text="Reject" />
+
+                            </li>
+                          ) : (
+                            <React.Fragment>
+                              <li className="nk-tb-action-hidden" onClick={() => {
+                                approveApplication(item.id);
+                              }}>
+                                <TooltipComponent tag="a" containerClassName="btn btn-trigger btn-icon" id={"approve" + item.id}
+                                  icon="check-fill-c" direction="top" text="Approve" />
+                              </li>
                               <li className="nk-tb-action-hidden" onClick={() => {
                                 loadDetail(item.id);
                                 setreMarkModal(true);
                               }}>
-                                <TooltipComponent
-                                  tag="a"
-                                  containerClassName="btn btn-trigger btn-icon"
-                                  id={"reject" + item.id}
-                                  icon="cross-fill-c"
-                                  direction="top"
-                                  text="Reject"
-                                />
-                                
+                                <TooltipComponent tag="a" containerClassName="btn btn-trigger btn-icon" id={"reject" + item.id}
+                                  icon="cross-fill-c" direction="top" text="Reject" />
                               </li>
-                            ) : (
-                              <React.Fragment>
-                                <li className="nk-tb-action-hidden" onClick={() => onApproveClick(item.id)}>
-                                  <TooltipComponent
-                                    tag="a"
-                                    containerClassName="btn btn-trigger btn-icon"
-                                    id={"approve" + item.id}
-                                    icon="check-fill-c"
-                                    direction="top"
-                                    text="Approve"
-                                  />
-                                </li>
-                                <li className="nk-tb-action-hidden" onClick={() => {
-                                loadDetail(item.id);
-                                setreMarkModal(true);
-                              }}>
-                                  <TooltipComponent
-                                    tag="a"
-                                    containerClassName="btn btn-trigger btn-icon"
-                                    id={"reject" + item.id}
-                                    icon="cross-fill-c"
-                                    direction="top"
-                                    text="Reject"
-                                  />
-                                </li>
-                              </React.Fragment>
-                            )}
-                            <li>
-                              <UncontrolledDropdown>
-                                <DropdownToggle tag="a" className="dropdown-toggle btn btn-icon btn-trigger">
-                                  <Icon name="more-h"></Icon>
-                                </DropdownToggle>
-                                <DropdownMenu end>
-                                  <ul className="link-list-opt no-bdr">
-                                    <li>
-                                      <DropdownItem
-                                        tag="a"
-                                        href="#view"
-                                        onClick={(ev) => {
-                                          ev.preventDefault();
-                                          loadDetail(item.id);
-                                          setViewModal(true);
-                                        }}
+                            </React.Fragment>
+                          )}
+                          <li>
+                            <UncontrolledDropdown>
+                              <DropdownToggle tag="a" className="dropdown-toggle btn btn-icon btn-trigger">
+                                <Icon name="more-h"></Icon>
+                              </DropdownToggle>
+                              <DropdownMenu end>
+                                <ul className="link-list-opt no-bdr">
+                                  <li>
+                                    <DropdownItem tag="a" href="#view"
+                                      onClick={(ev) => {
+                                        ev.preventDefault();
+                                        loadDetail(item.id);
+                                        setViewModal(true);
+                                      }}
+                                    >
+                                      <Icon name="eye"></Icon>
+                                      <span>Quick View</span>
+                                    </DropdownItem>
+                                  </li>
+                                  <li>
+                                    <DropdownItem tag="a" href="#details" onClick={(ev) => {
+                                      ev.preventDefault();
+                                      history.push(`${process.env.PUBLIC_URL}/kyc-details-regular/${item.id}`);
+                                    }}
+                                    >
+                                      <Icon name="focus"></Icon>
+                                      <span>View Details</span>
+                                    </DropdownItem>
+                                  </li>
+                                  {item.status === "rejected" ? null : item.status === "approved" ? (
+                                    <li onClick={() => onRejectClick(item.id)}>
+                                      <DropdownItem tag="a" href="#reject" onClick={(ev) => {
+                                        ev.preventDefault();
+                                      }}
                                       >
-                                        <Icon name="eye"></Icon>
-                                        <span>Quick View</span>
+                                        <Icon name="na"></Icon>
+                                        <span>Reject User</span>
                                       </DropdownItem>
                                     </li>
-                                    <li>
-                                      <DropdownItem
-                                        tag="a"
-                                        href="#details"
-                                        onClick={(ev) => {
+                                  ) : (
+                                    <React.Fragment>
+                                      <li onClick={() => onApproveClick(item.id)}>
+                                        <DropdownItem tag="a" href="#approve" onClick={(ev) => {
                                           ev.preventDefault();
-                                          history.push(`${process.env.PUBLIC_URL}/kyc-details-regular/${item.id}`);
                                         }}
-                                      >
-                                        <Icon name="focus"></Icon>
-                                        <span>View Details</span>
-                                      </DropdownItem>
-                                    </li>
-                                    {item.status === "Rejected" ? null : item.status === "Approved" ? (
-                                      <li onClick={() => onRejectClick(item.id)}>
-                                        <DropdownItem
-                                          tag="a"
-                                          href="#reject"
-                                          onClick={(ev) => {
-                                            ev.preventDefault();
-                                          }}
                                         >
-                                          <Icon name="na"></Icon>
-                                          <span>Reject User</span>
+                                          <Icon name="check-thick"></Icon>
+                                          <span>Approve</span>
                                         </DropdownItem>
                                       </li>
-                                    ) : (
-                                      <React.Fragment>
-                                        <li onClick={() => onApproveClick(item.id)}>
-                                          <DropdownItem
-                                            tag="a"
-                                            href="#approve"
-                                            onClick={(ev) => {
-                                              ev.preventDefault();
-                                            }}
-                                          >
-                                            <Icon name="check-thick"></Icon>
-                                            <span>Approve</span>
-                                          </DropdownItem>
-                                        </li>
-                                        <li onClick={() => onRejectClick(item.id)}>
-                                          <DropdownItem
-                                            tag="a"
-                                            href="#suspend"
-                                            onClick={(ev) => {
-                                              ev.preventDefault();
-                                            }}
-                                          >
-                                            <Icon name="na"></Icon>
-                                            <span>Suspend User</span>
-                                          </DropdownItem>
-                                        </li>
-                                      </React.Fragment>
-                                    )}
-                                  </ul>
-                                </DropdownMenu>
-                              </UncontrolledDropdown>
-                            </li>
-                          </ul>
-                        </DataTableRow>
-                      </DataTableItem>
-                    );
-                  })
+                                      <li onClick={() => onRejectClick(item.id)}>
+                                        <DropdownItem tag="a" href="#suspend" onClick={(ev) => {
+                                          ev.preventDefault();
+                                        }}
+                                        >
+                                          <Icon name="na"></Icon>
+                                          <span>Suspend User</span>
+                                        </DropdownItem>
+                                      </li>
+                                    </React.Fragment>
+                                  )}
+
+
+                                </ul>
+                              </DropdownMenu>
+                            </UncontrolledDropdown>
+                          </li>
+                        </ul>
+                      </DataTableRow>
+                    </DataTableItem>
+                  </>
+                ))
                 : null}
             </DataTableBody>
             <div className="card-inner">
@@ -701,7 +698,6 @@ const KycListRegular = ({ history }) => {
           </DataTable>
         </Block>
       </Content>
-
       <Modal isOpen={viewModal} toggle={() => setViewModal(false)} className="modal-dialog-centered" size="lg">
         <ModalBody>
           <a
@@ -723,38 +719,37 @@ const KycListRegular = ({ history }) => {
             <Row className="gy-3">
               <Col lg={6}>
                 <span className="sub-text"> ID</span>
-                <span className="caption-text">{detail.id}</span>
+                <span className="caption-text">{detail?.kyc?.id}</span>
               </Col>
               <Col lg={6}>
                 <span className="sub-text">Applicant Name </span>
-                <span className="caption-text text-break">{detail.name}</span>
+                <span className="caption-text text-break">{detail?.kyc?.first_name}</span>
               </Col>
               <Col lg={6}>
                 <span className="sub-text">Document Type </span>
-                <span className="caption-text">{detail.doc}</span>
+                <span className="caption-text">{detail?.kyc?.document_type}</span>
               </Col>
               <Col lg={6}>
                 <span className="sub-text">Status</span>
                 <Badge
-                  color={detail.status === "Approved" ? "success" : detail.status === "Pending" ? "info" : "danger"}
+                  color={detail.status === "approved" ? "success" : detail.status === "pending_approval" ? "info" : "danger"}
                   size="md"
                 >
-                  {detail.status}
+                  {detail?.status === "pending_approval" ? "Pending" : detail?.status}
                 </Badge>
               </Col>
               <Col lg={6}>
                 <span className="sub-text">Date</span>
-                <span className="caption-text"> {detail.date}</span>
+                <span className="caption-text"> {moment(detail?.time_of_application).format('DD MMM, YYYY h:mm a')}</span>
               </Col>
               <Col lg={6}>
                 <span className="sub-text">Checked By</span>
-                <span className="caption-text"> {detail.checked}</span>
+                <span className="caption-text">{detail?.status_given_by_user ? detail?.status_given_by_user.first_name : '-'}</span>
               </Col>
             </Row>
           </div>
         </ModalBody>
       </Modal>
-
       <Modal isOpen={reMarkModal} toggle={() => setreMarkModal(false)} className="modal-dialog-centered" size="lg">
         <ModalBody>
           <a
@@ -776,26 +771,34 @@ const KycListRegular = ({ history }) => {
             <Row className="gy-2">
               <Col lg={12}>
                 <div className="form-group mb-2">
-                    <Label htmlFor="default-textarea" className="form-label">
-                      Remark
-                    </Label>
-                    <div className="form-control-wrap">
-                      <Input className="no-resize" id="default-textarea" defaultValue="Enter KYC Rejection details" type="textarea" />
-                    </div>
+                  <Label htmlFor="default-textarea" className="form-label">
+                    Remark
+                  </Label>
+                  <div className="form-control-wrap">
+                  <Input
+              className="no-resize"
+              id="default-textarea"
+              value={remark}
+              onChange={handleRemarkChange}
+              type="textarea"
+            />
                   </div>
-              </Col>        
-              
+                </div>
+              </Col>
+
               <Col lg={6}>
                 <div className="mb-2">
-                <Button color="primary">Submit</Button>
+                  <Button color="primary" onClick={() => {
+                    onRejectFunction(detail.id, remark);
+                  }} >Submit</Button>
                 </div>
               </Col>
             </Row>
           </div>
         </ModalBody>
       </Modal>
-
     </React.Fragment>
+
   );
 };
 export default KycListRegular;
