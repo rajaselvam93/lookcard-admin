@@ -1,4 +1,4 @@
-import Axios from "axios";
+import Axios from "./axios.service";
 
 const CARD_URL="https://dev.lookcard.io/api/v1/card-fPqIXgqIP3s5/"
 const CARD_URL_TEST="https://test.dev.lookcard.io/api/v1/card-fPqIXgqIP3s5/"

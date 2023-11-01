@@ -82,7 +82,7 @@ const KycListRegular = ({ history }) => {
     try {
       const response = await kycuserlist(req);
       if (response && response.data && response.data.data) {
-        await setData(response?.data?.data);
+        await setData(response?.data?.data.cards);
       } else {
         console.log("enter Raja");
       }
@@ -132,12 +132,24 @@ const KycListRegular = ({ history }) => {
   }
 
   const exportData = (data, filename) => {
-    const url = window.URL.createObjectURL(new Blob([data]))
-    const link = document.createElement('a');
-    link.href = url
-    link.setAttribute('download', filename)
-    document.body.appendChild(link)
-    link.click()
+    console.log("data.length", data.length);
+    if (data && data.trim() !== "") {
+      try {
+        const blob = new Blob([data], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+      } catch (error) {
+        console.error("Error creating the Blob or downloading the PDF:", error);
+      }
+    } else {
+      console.error("Data is empty or invalid.");
+    }
+
   }
 
 
@@ -221,6 +233,7 @@ const KycListRegular = ({ history }) => {
   const handleButtonClick = () => {
     setSearchText('');
     toggle();
+    resetFilter();
   };
 
   const handleRemarkChange = (event) => {
@@ -269,7 +282,7 @@ const KycListRegular = ({ history }) => {
     try {
       const response = await kycuserlist();
       if (response && response.data && response.data.data) {
-        const filterData = response.data.data;
+        const filterData = response.data.data.cards;
         if (selectedDocType && !selectedStatus) {
           const filteredObject = filterData.filter((item) => {
             return item.kyc?.document_type.toLowerCase().includes(selectedDocType);
@@ -330,10 +343,14 @@ const KycListRegular = ({ history }) => {
   // Get current list, pagination
   const indexOfLastItem = currentPage * itemPerPage;
   const indexOfFirstItem = indexOfLastItem - itemPerPage;
-  const currentItems = data.slice(indexOfFirstItem, indexOfLastItem);
+  console.log("indexOfLastItem", indexOfLastItem);
+  console.log("indexOfFirstItem", indexOfFirstItem);
+  console.log("data", data);
+   const currentItems = data.slice(indexOfFirstItem, indexOfLastItem);
 
   // Change Page
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
 
   return (
 
